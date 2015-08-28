@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.apolloners.blackandwhite.Server;
+import com.apolloners.genius.common.CommonCode;
+import com.apolloners.genius.common.Protocol;
 import com.apolloners.genius.room.GameRoom;
 import com.apolloners.genius.room.Room;
 import com.apolloners.genius.room.WaitingRoom;
@@ -24,6 +26,8 @@ public class Client extends Thread	{
 	private Socket socket;
 	private DataOutputStream os;
 	private DataInputStream is;
+	
+	private boolean isPlaying;
 	
 	private String userId;
 	
@@ -50,8 +54,8 @@ public class Client extends Thread	{
 		while(socket != null)	{
 			try {
 				input = is.readUTF();
-				System.out.println(input);
-				os.writeUTF(input);
+				logger.debug("Receive message from " + userId + " : " +input);
+				action(input);
 			} catch (IOException e) {
 				try {
 					socket.close();
@@ -62,39 +66,91 @@ public class Client extends Thread	{
 		}
 	}
 	
+	protected void action(String message)	{
+		String[] messages = message.split("|");
+		switch(Protocol.valueOf(messages[0]))	{
+			case CREATE:
+				createGameRoom(messages[1]);
+				break;
+			case JOIN:
+				Room gameRoom = ((WaitingRoom)room).getGameRoom(Integer.parseInt(messages[1]));
+				enterRoom(gameRoom);
+				break;
+			case REFRESH:
+				refreshWaitingList();
+				break;
+			case EXIT:
+				exitRoom();
+				break;
+		}
+	}
 	
-	public int createGameRoom(String title)	{
-		int result = 0;
+	public void enterRoom(Room room)	{
+		if(room == null)	{
+			write(Protocol.FAIL.name() + CommonCode.DELIMITER + CommonCode.NOT_EXIST);
+			logger.info(userId + " fail to enter room(room is not exist)");
+		}
+		
+		int result = room.enterRoom(this);
+		if(result == 1)	{
+			this.room = room;
+			write(Protocol.SUCCESS.name());
+			if(room instanceof GameRoom)	{
+				this.isPlaying = true;				
+			}
+			logger.info(userId + " is entered room");
+		} else if(result == -1){
+			write(Protocol.FAIL.name() + CommonCode.DELIMITER + CommonCode.EXCEED_PERSON);
+			logger.info(userId + " fail to enter room(exceed person)");
+		}
+	}
+	
+	public void refreshWaitingList()	{
+		if(room instanceof WaitingRoom)	{
+			String roomList = ((WaitingRoom) this.room).getRefreshJsonString();
+			write(roomList);
+		}
+	}
+	
+	
+	public void createGameRoom(String title)	{
 		if(room instanceof WaitingRoom)	{
 			WaitingRoom waitingRoom = (WaitingRoom)room;
 			GameRoom gameRoom = waitingRoom.createGameRoom(title, this);
 			
-			result = -1;
-			
 			if(gameRoom != null)	{
-				waitingRoom.exitRoom(this);			
-				result = 1;
+				this.room = gameRoom;
+				this.isPlaying = true;
+				logger.info(this.userId + " create Gameroom");
+			} else	{
+				write(Protocol.FAIL + CommonCode.DELIMITER + CommonCode.EXCEED_ROOM);
+				logger.info(this.userId + "fail to create Gameroom");
 			}
 		}
-		
-		return result;
 	}
 	
-	public int exitRoom()	{
-		int result = 0;
-		room.exitRoom(this);
-		if(room instanceof WaitingRoom)	{
-			// ���� ����
-			
-			result = 2;
+	public void exitRoom()	{
+		Room parentRoom = room.exitRoom(this);
+		if(parentRoom == null)	{
+			logger.info(this.userId + " leave the waiting room.");
+			// disconnect socket
 		} else	{
-			room = Server.waitingRoom;
-			result = room.enterRoom(this);
-			
-			result = 1;
+			this.room = parentRoom;
+			this.isPlaying = false;
+			logger.info(this.userId + " exit the game room.");
 		}
 		
-		return result;
+		write(Protocol.SUCCESS.name());
+	}
+	
+	protected void write(String message)	{
+		try {
+			os.writeUTF(message);
+			logger.info("Send message " + this.userId + " : " + message);
+		} catch (IOException e) {
+			logger.error("Send message to " + this.userId + " is failed.");
+			logger.error(e.getMessage());
+		}
 	}
 
 	/**
@@ -132,6 +188,19 @@ public class Client extends Thread	{
 	public String getUserId()	{
 		return userId;
 	}
-	
+
+	/**
+	 * @return the isPlaying
+	 */
+	public boolean isPlaying() {
+		return isPlaying;
+	}
+
+	/**
+	 * @param isPlaying the isPlaying to set
+	 */
+	public void setPlaying(boolean isPlaying) {
+		this.isPlaying = isPlaying;
+	}
 	
 }

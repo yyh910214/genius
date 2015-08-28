@@ -5,9 +5,15 @@
  */
 package com.apolloners.genius.room;
 
-import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,51 +23,99 @@ public class WaitingRoom implements Room {
 	
 	protected static Logger logger = LoggerFactory.getLogger(WaitingRoom.class);
 	
-	private List<Client> waitingClients;	// ����� ���
-	private List<GameRoom> gameRooms;
+	private List<Client> waitingClients;	// 대기실 클라이언트 명단.
+	private Map<Integer ,GameRoom> gameRooms;
 	
-	private int max = 10;
+	private int maxPerson = 20;
+	private int maxRoom = 10;
 	
 	public WaitingRoom()	{
-		this.waitingClients = new ArrayList<Client>();
-		this.gameRooms = new ArrayList<GameRoom>();
+		this.waitingClients = Collections.synchronizedList(new LinkedList<Client>());
+		this.gameRooms = Collections.synchronizedMap(new HashMap<Integer, GameRoom>());
 	}
 
 	/**
-	 * ���� ����
+	 * To be considerate synchronized
 	 */
 	@Override
 	public int enterRoom(Client client) {
-		if(waitingClients.size() > max)	{
+		if(waitingClients.size() >= maxPerson)	{
 			return -1;
 		}
 		waitingClients.add(client);
-		
 		return 1;
 	}
 	
-	/**
-	 * ���ӹ� �����
-	 */
+	public Room getGameRoom(int roomNo)	{
+		return this.gameRooms.get(roomNo);
+	}
+	
+	
 	public GameRoom createGameRoom(String title, Client master)	{
-		if(gameRooms.size() > max)	{
+		if(gameRooms.size() > maxRoom)	{
 			return null;
 		}
-		GameRoom gameRoom = new GameRoom(title, master);
-		gameRooms.add(gameRoom);
+		GameRoom gameRoom = new GameRoom(this, title, master);
+		gameRooms.put(gameRoom.getRoomNo(), gameRoom);
 		
 		return gameRoom;
+	}
+	
+	public void removeGameRoom(GameRoom gameRoom)	{
+		gameRooms.remove(gameRoom);
+	}
+	
+	protected JSONArray getRoomListJson()	{
+		JSONArray roomArray = new JSONArray();
+		JSONObject jsonObject;
+		
+		Iterator<Map.Entry<Integer, GameRoom>> iter = this.gameRooms.entrySet().iterator();
+		while(iter.hasNext())	{
+			jsonObject = new JSONObject();
+			GameRoom room = iter.next().getValue();
+			
+			jsonObject.put("no", room.getRoomNo());
+			jsonObject.put("title", room.getTitle());
+			jsonObject.put("masterId", room.getMasterId());
+			
+			roomArray.add(jsonObject);
+		}
+		
+		return roomArray;
+	}
+	
+	protected JSONArray getWaitingListJson()	{
+		JSONArray clientArray = new JSONArray();
+
+		for(Client client : waitingClients)	{
+			clientArray.add(client.getUserId());
+		}
+		
+		return clientArray;
+	}
+	
+	public String getRefreshJsonString()	{
+		JSONObject jsonObject = new JSONObject();
+		jsonObject.put("users", getWaitingListJson());
+		jsonObject.put("rooms", getRoomListJson());
+		
+		return jsonObject.toJSONString();
 	}
 
 	/* (non-Javadoc)
 	 * @see genius.room.Room#exitRoom(genius.client.Client)
 	 */
 	@Override
-	public int exitRoom(Client client) {
-		if(waitingClients.remove(client))	{
-			return 1;
-		}
-		return -1;
+	public Room exitRoom(Client client) {
+		waitingClients.remove(client);
+		return null;
 	}
 
+	public int getNumberOfPerson()	{
+		return waitingClients.size();
+	}
+	
+	public boolean isFull()	{
+		return getNumberOfPerson() >= maxPerson;
+	}
 }

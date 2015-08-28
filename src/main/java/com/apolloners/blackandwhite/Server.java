@@ -33,14 +33,14 @@ public class Server implements GeniusServer {
 	public void startServer(int port) {
 		ServerSocket server = null;
 		try {
-			server = new ServerSocket(port);
+			server = new ServerSocket(port, 50);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			logger.error(e1.getMessage());
 		}
-		
 		while(true)	{
-		
+			// 대기실이 가득 차면 요청을 받지 않음.
+			if(!waitingRoom.isFull())	{
 				Socket clientSocket;
 				try {
 					logger.info("클라이언트의 연결을 대기중입니다.....");
@@ -56,6 +56,7 @@ public class Server implements GeniusServer {
 					logger.error("Client Connect Error");
 					logger.error(e.getMessage());
 				}
+			}
 		}
 	}
 
