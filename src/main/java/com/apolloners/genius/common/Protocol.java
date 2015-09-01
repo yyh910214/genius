@@ -6,5 +6,5 @@
 package com.apolloners.genius.common;
 
 public enum Protocol {
-	SUCCESS, FAIL, CREATE, JOIN, REFRESH, EXIT
+	SUCCESS, FAIL, CREATE, JOIN, REFRESH, EXIT, START, FINISH, ATTACK, DEFENSE, END
 }

@@ -12,4 +12,8 @@ public class CommonCode {
 	public static final String FAIL = "ERR_002";	// 실패
 	public static final String EXCEED_PERSON = "ERR_003";	// 입장 가능 인원 초과
 	public static final String NOT_EXIST = "ERR_004";	// 존재하지 않음.
+	
+	public static final String WIN = "WIN";
+	public static final String LOSE = "LOSE";
+	public static final String DRAW = "DRAW";
 }

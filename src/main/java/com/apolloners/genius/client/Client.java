@@ -50,6 +50,7 @@ public class Client extends Thread	{
 	@Override
 	public void run() {
 		logger.info("Client Start");
+		write(Protocol.SUCCESS.name());
 		String input;
 		while(socket != null)	{
 			try {
@@ -67,7 +68,7 @@ public class Client extends Thread	{
 	}
 	
 	protected void action(String message)	{
-		String[] messages = message.split("|");
+		String[] messages = message.split("\\|");
 		switch(Protocol.valueOf(messages[0]))	{
 			case CREATE:
 				createGameRoom(messages[1]);
@@ -81,6 +82,11 @@ public class Client extends Thread	{
 				break;
 			case EXIT:
 				exitRoom();
+				break;
+			default:
+				if(room instanceof GameRoom)	{
+					
+				}
 				break;
 		}
 	}
@@ -143,7 +149,7 @@ public class Client extends Thread	{
 		write(Protocol.SUCCESS.name());
 	}
 	
-	protected void write(String message)	{
+	public void write(String message)	{
 		try {
 			os.writeUTF(message);
 			logger.info("Send message " + this.userId + " : " + message);

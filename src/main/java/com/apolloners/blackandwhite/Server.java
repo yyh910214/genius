@@ -47,10 +47,10 @@ public class Server implements GeniusServer {
 					clientSocket = server.accept();
 					logger.info(clientSocket.getInetAddress() + "와 연결되었습니다.");
 					Client client = new Client(clientSocket);
-					client.start();
 					
 					waitingRoom.enterRoom(client);
 					client.setRoom(waitingRoom);
+					client.start();
 					
 				} catch (IOException e) {
 					logger.error("Client Connect Error");
