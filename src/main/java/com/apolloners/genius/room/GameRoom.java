@@ -5,6 +5,8 @@
  */
 package com.apolloners.genius.room;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -17,6 +19,7 @@ import com.apolloners.genius.common.Protocol;
 public class GameRoom implements Room {
 	
 	protected static final Logger logger = LoggerFactory.getLogger(GameRoom.class);
+	private static final int MAX_ROUND = 10;
 	
 	private static AtomicInteger roomIndex = new AtomicInteger(1);
 	
@@ -38,9 +41,12 @@ public class GameRoom implements Room {
 	private boolean playing;
 	private boolean playOrder;	// true : master first, false : guest first
 	private boolean attackOrder;	// true : Attack, false : Defense
-	
-	private int masterPoint, guestPoint;	// Total point of the clients
+
 	private int firstPoint, secondPoint;	// Turn point of the clients
+	
+	private List<Integer> masterPoints, guestPoints;
+	
+	private int round;
 	
 	public GameRoom(WaitingRoom waitingRoom, String title, Client master)	{
 		this.waitingRoom = waitingRoom;
@@ -68,13 +74,16 @@ public class GameRoom implements Room {
 		this.playing = true;
 		this.guest.write(Protocol.START.name());
 		this.master.write(Protocol.START.name());
-		
-		this.masterPoint = this.guestPoint = 100;
-		playOrder = (Math.random() < 0.5);
+	
+		this.playOrder = (Math.random() < 0.5);
+		this.round = 0;
+		this.masterPoints = new ArrayList<Integer>();
+		this.guestPoints = new ArrayList<Integer>();
 		doTurnStart();
 	}
 	
 	protected void doTurnStart()	{
+		round++;
 		if(playOrder)	{
 			first = this.master;
 			second = this.guest;
@@ -92,13 +101,13 @@ public class GameRoom implements Room {
 	 * Progress Input Data
 	 * Reduce the point from a client.
 	 */
-	protected void doInput(Client client, String pointString)	{
+	public void doInput(Client client, String pointString)	{
 		int point = Integer.parseInt(pointString);
 		
 		if(master == client)	{
-			this.masterPoint -= point;
+			this.masterPoints.add(point);
 		} else if(guest == client)	{
-			this.guestPoint -= point;
+			this.guestPoints.add(point);
 		}
 		
 		if(attackOrder)	{
@@ -141,8 +150,35 @@ public class GameRoom implements Room {
 			logger.debug(firstMsg.toString());
 			logger.debug(secondMsg.toString());
 			
-			doTurnStart();
+			if(round != MAX_ROUND)	{
+				doTurnStart();	
+			} else	{
+				doGameEnd();
+			}
 		}
+	}
+	
+	protected void doGameEnd()	{
+		int masterWin = 0, guestWin = 0;
+		for(int i = 0; i < MAX_ROUND; ++i)	{
+			if(masterPoints.get(i) < guestPoints.get(i))	{
+				guestWin++;
+			} else if(guestPoints.get(i) < masterPoints.get(i))	{
+				masterWin++;
+			}
+		}
+		
+		if(masterWin > guestWin)	{
+			master.write(Protocol.END.name() + CommonCode.DELIMITER + CommonCode.WIN);
+			guest.write(Protocol.END.name() + CommonCode.DELIMITER + CommonCode.LOSE);
+		} else if(guestWin > masterWin)	{
+			master.write(Protocol.END.name() + CommonCode.DELIMITER + CommonCode.LOSE);
+			guest.write(Protocol.END.name() + CommonCode.DELIMITER + CommonCode.WIN);
+		} else	{
+			master.write(Protocol.END.name() + CommonCode.DELIMITER + CommonCode.DRAW);
+			guest.write(Protocol.END.name() + CommonCode.DELIMITER + CommonCode.DRAW);
+		}
+		
 	}
 	
 	/* (non-Javadoc)
@@ -185,6 +221,5 @@ public class GameRoom implements Room {
 	public boolean isPlaying() {
 		return playing;
 	}
-
 	
 }
