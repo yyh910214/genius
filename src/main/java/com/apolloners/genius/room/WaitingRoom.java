@@ -38,7 +38,7 @@ public class WaitingRoom implements Room {
 	 * To be considerate synchronized
 	 */
 	@Override
-	public int enterRoom(Client client) {
+	public synchronized int enterRoom(Client client) {
 		if(waitingClients.size() >= maxPerson)	{
 			return -1;
 		}
@@ -51,7 +51,7 @@ public class WaitingRoom implements Room {
 	}
 	
 	
-	public GameRoom createGameRoom(String title, Client master)	{
+	public synchronized GameRoom createGameRoom(String title, Client master)	{
 		if(gameRooms.size() > maxRoom)	{
 			return null;
 		}

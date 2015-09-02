@@ -110,14 +110,14 @@ public class GameRoom implements Room {
 			this.guestPoints.add(point);
 		}
 		
-		if(attackOrder)	{
+		if(attackOrder)	{	// attack Protocol case
 			firstPoint = point;
 			second.write(Protocol.DEFENSE.name() + CommonCode.DELIMITER + pointString);
 			attackOrder = false;
 			
 			logger.debug(first.getUserId() + "'s Attack point is " + firstPoint);
 			// 점수 기록 필요함.
-		} else	{
+		} else	{	// Defense Protocol case
 			secondPoint = point;
 			StringBuilder firstMsg = new StringBuilder();
 			StringBuilder secondMsg = new StringBuilder();
@@ -133,7 +133,7 @@ public class GameRoom implements Room {
 				firstMsg.append(CommonCode.LOSE);
 				secondMsg.append(CommonCode.WIN);
 				
-				playOrder = !playOrder;
+				playOrder = !playOrder;	// change the play order
 			} else	{
 				firstMsg.append(CommonCode.DRAW);
 				secondMsg.append(CommonCode.DRAW);
@@ -158,6 +158,10 @@ public class GameRoom implements Room {
 		}
 	}
 	
+	/**
+	 * Calculate winner
+	 * Send the End Protocol
+	 */
 	protected void doGameEnd()	{
 		int masterWin = 0, guestWin = 0;
 		for(int i = 0; i < MAX_ROUND; ++i)	{

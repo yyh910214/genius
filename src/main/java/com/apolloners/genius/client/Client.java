@@ -9,7 +9,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,9 +54,9 @@ public class Client extends Thread {
 	@Override
 	public void run() {
 		logger.info("Client Start");
-		write(Protocol.SUCCESS.name());
+		write(CommonCode.SUCCESS);
 		this.userId = read();
-		while (socket != null) {
+		while (socket.isConnected()) {
 			action(read());
 		}
 	}
@@ -86,7 +88,7 @@ public class Client extends Thread {
 
 	public void enterRoom(Room room) {
 		if (room == null) {
-			write(Protocol.FAIL.name() + CommonCode.DELIMITER
+			write(Protocol.JOIN + CommonCode.DELIMITER
 					+ CommonCode.NOT_EXIST);
 			logger.info(userId + " fail to enter room(room is not exist)");
 		}
@@ -94,13 +96,13 @@ public class Client extends Thread {
 		int result = room.enterRoom(this);
 		if (result == 1) {
 			this.room = room;
-			write(Protocol.SUCCESS.name());
+			write(Protocol.JOIN + CommonCode.DELIMITER + CommonCode.SUCCESS);
 			if (room instanceof GameRoom) {
 				this.isPlaying = true;
 			}
 			logger.info(userId + " is entered room");
 		} else if (result == -1) {
-			write(Protocol.FAIL.name() + CommonCode.DELIMITER
+			write(Protocol.JOIN + CommonCode.DELIMITER
 					+ CommonCode.EXCEED_PERSON);
 			logger.info(userId + " fail to enter room(exceed person)");
 		}
@@ -109,7 +111,7 @@ public class Client extends Thread {
 	public void refreshWaitingList() {
 		if (room instanceof WaitingRoom) {
 			String roomList = ((WaitingRoom) this.room).getRefreshJsonString();
-			write(roomList);
+			write(Protocol.REFRESH + CommonCode.DELIMITER + roomList);
 		}
 	}
 
@@ -121,9 +123,10 @@ public class Client extends Thread {
 			if (gameRoom != null) {
 				this.room = gameRoom;
 				this.isPlaying = true;
+				write(Protocol.CREATE + CommonCode.DELIMITER + CommonCode.SUCCESS);
 				logger.info(this.userId + " create Gameroom");
 			} else {
-				write(Protocol.FAIL + CommonCode.DELIMITER
+				write(Protocol.CREATE + CommonCode.DELIMITER
 						+ CommonCode.EXCEED_ROOM);
 				logger.info(this.userId + "fail to create Gameroom");
 			}
@@ -141,7 +144,7 @@ public class Client extends Thread {
 			logger.info(this.userId + " exit the game room.");
 		}
 
-		write(Protocol.SUCCESS.name());
+		write(Protocol.EXIT + CommonCode.DELIMITER + CommonCode.SUCCESS);
 	}
 
 	public void write(String message) {
