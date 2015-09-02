@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.net.SocketException;
 
 import org.apache.commons.io.IOUtils;
+import org.junit.runners.ParentRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,9 +57,10 @@ public class Client extends Thread {
 		logger.info("Client Start");
 		write(CommonCode.SUCCESS);
 		this.userId = read();
-		while (socket.isConnected()) {
+		while (!socket.isClosed()) {
 			action(read());
 		}
+		logger.debug(this.userId + "'s thread is End");
 	}
 
 	protected void action(String message) {
@@ -88,8 +90,7 @@ public class Client extends Thread {
 
 	public void enterRoom(Room room) {
 		if (room == null) {
-			write(Protocol.JOIN + CommonCode.DELIMITER
-					+ CommonCode.NOT_EXIST);
+			write(Protocol.JOIN + CommonCode.DELIMITER + CommonCode.NOT_EXIST);
 			logger.info(userId + " fail to enter room(room is not exist)");
 		}
 
@@ -123,7 +124,8 @@ public class Client extends Thread {
 			if (gameRoom != null) {
 				this.room = gameRoom;
 				this.isPlaying = true;
-				write(Protocol.CREATE + CommonCode.DELIMITER + CommonCode.SUCCESS);
+				write(Protocol.CREATE + CommonCode.DELIMITER
+						+ CommonCode.SUCCESS);
 				logger.info(this.userId + " create Gameroom");
 			} else {
 				write(Protocol.CREATE + CommonCode.DELIMITER
@@ -137,13 +139,15 @@ public class Client extends Thread {
 		Room parentRoom = room.exitRoom(this);
 		if (parentRoom == null) {
 			logger.info(this.userId + " leave the waiting room.");
-			// disconnect socket
+			IOUtils.closeQuietly(is);
+			IOUtils.closeQuietly(os);
+			IOUtils.closeQuietly(socket);
+			logger.info(this.userId + "'s connection is closed.");
 		} else {
 			this.room = parentRoom;
 			this.isPlaying = false;
 			logger.info(this.userId + " exit the game room.");
 		}
-
 		write(Protocol.EXIT + CommonCode.DELIMITER + CommonCode.SUCCESS);
 	}
 
@@ -162,10 +166,18 @@ public class Client extends Thread {
 		try {
 			input = is.readUTF();
 		} catch (IOException e) {
-			logger.debug(e.getMessage());
+			logger.error("Socket read IO Exception");
+			logger.error(e.getMessage());
+			removeClient();
 		}
 		logger.debug("Receive message from " + userId + " : " + input);
 		return input;
+	}
+
+	protected void removeClient() {
+		logger.debug("Remove Client");
+		exitRoom();	// If, this client is in gameroom, exit one more
+		exitRoom();
 	}
 
 	/**

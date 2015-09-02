@@ -62,7 +62,8 @@ public class WaitingRoom implements Room {
 	}
 	
 	public void removeGameRoom(GameRoom gameRoom)	{
-		gameRooms.remove(gameRoom);
+		logger.info(gameRoom.getRoomNo() + "th room removed.");
+		gameRooms.remove(gameRoom.getRoomNo());
 	}
 	
 	protected JSONArray getRoomListJson()	{

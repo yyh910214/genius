@@ -52,6 +52,7 @@ public class GameRoom implements Room {
 		this.waitingRoom = waitingRoom;
 		this.title = title;
 		this.master = master;
+		this.guest = null;
 		this.roomNo = roomIndex.getAndIncrement();
 		masterId = master.getUserId();
 	}
@@ -194,6 +195,8 @@ public class GameRoom implements Room {
 			this.master = this.guest;
 			if(this.master == null)	{
 				waitingRoom.removeGameRoom(this);
+			} else	{
+				this.masterId = this.master.getUserId();
 			}
 		}
 		
