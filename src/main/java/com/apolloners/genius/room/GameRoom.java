@@ -65,7 +65,8 @@ public class GameRoom implements Room {
 			this.master = client;
 		} else	{
 			this.guest = client;
-			startGame();
+			this.master.write(Protocol.JOIN + CommonCode.DELIMITER + CommonCode.ID + 
+					CommonCode.DELIMITER + this.guest.getUserId());
 		}
 		return 1;
 	}

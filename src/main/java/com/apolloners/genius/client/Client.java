@@ -80,6 +80,11 @@ public class Client extends Thread {
 		case EXIT:
 			exitRoom();
 			break;
+		case START:
+			if (room instanceof GameRoom) {
+				((GameRoom) room).startGame();
+			}
+			break;
 		default:
 			if (room instanceof GameRoom) {
 				((GameRoom) room).doInput(this, messages[1]);

@@ -17,4 +17,6 @@ public class CommonCode {
 	public static final String WIN = "WIN";
 	public static final String LOSE = "LOSE";
 	public static final String DRAW = "DRAW";
+	
+	public static final String ID = "ID";
 }
